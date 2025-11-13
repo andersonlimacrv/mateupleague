@@ -1,0 +1,70 @@
+services:
+  backend:
+    build: ./backend
+    container_name: backend
+    env_file: .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SECRET_KEY_HASH=${SECRET_KEY_HASH}
+      - DEBUG=${DEBUG}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - VITE_BACKEND_PORT=${VITE_BACKEND_PORT}
+    depends_on:
+      - db
+    networks:
+      - app-network
+    ports:
+      - "${VITE_BACKEND_PORT}:${VITE_BACKEND_PORT}"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_FRONTEND_PORT: ${VITE_FRONTEND_PORT}
+        VITE_BACKEND_PORT: ${VITE_BACKEND_PORT}
+        VITE_DEPLOY_API: ${VITE_DEPLOY_API}
+        VITE_BROKER_API_URL: ${VITE_BROKER_API_URL}
+        VITE_BROKER_API_K: ${VITE_BROKER_API_K}
+
+    container_name: frontend
+    depends_on:
+      - backend
+    env_file: .env
+    environment:
+      - VITE_FRONTEND_PORT=${VITE_FRONTEND_PORT}
+      - VITE_BACKEND_PORT=${VITE_BACKEND_PORT}
+      - VITE_DEPLOY_API=${VITE_DEPLOY_API}
+      - VITE_BROKER_API_URL=${VITE_BROKER_API_URL}
+      - VITE_BROKER_API_K=${VITE_BROKER_API_K}
+    networks:
+      - app-network
+    ports:
+      - "${VITE_FRONTEND_PORT}:${VITE_FRONTEND_PORT}"
+    volumes:
+      - ./frontend-output:/app/output
+    restart: unless-stopped
+
+
+  db:
+    image: postgres:17
+    container_name: postgres_db
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backups:/backups
+    networks:
+      - app-network
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+
+networks:
+  app-network:
