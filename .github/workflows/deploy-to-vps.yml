@@ -17,9 +17,11 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
+          ls -l ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}"
+          echo "${{ secrets.SSH_PRIVATE_KEY_NAME }}"
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
           chmod 600 ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
-          ls -l ~/.ssh
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/${{ secrets.KNOW_HOSTS_PATH }}
 
       - name: Deploy via SSH
