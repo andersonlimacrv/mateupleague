@@ -17,8 +17,8 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
-          chmod 600 ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/github_actions_deploy
+          chmod 600 ~/.ssh/github_actions_deploy
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/${{ secrets.KNOW_HOSTS_PATH }}
 
       - name: Deploy via SSH
