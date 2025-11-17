@@ -1,7 +1,3 @@
-Here is the **rewritten documentation in English**, preserving the meaning, **without adding new content**, and including a **fully functional Table of Contents with correct internal links**.
-
----
-
 # 📋 Automated Deploy Setup with GitHub Actions
 
 ## Table of Contents
