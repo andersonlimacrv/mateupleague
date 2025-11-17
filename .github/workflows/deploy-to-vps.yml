@@ -1,4 +1,4 @@
-name: Deploy to VPS
+name: 🚀 Deploy to VPS
 
 on:
   push:
@@ -7,24 +7,27 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to VPS
+    name: Deploy Application
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH key
+      - name: 🔑 Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
           chmod 600 ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy via SSH
+      - name: 🚀 Execute Deploy - via SSH
         run: |
           ssh -i ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+            set -e
             cd ${{ secrets.REPO_VPS }}
+
+            git config --global --add safe.directory $PWD
 
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1

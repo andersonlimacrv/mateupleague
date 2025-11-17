@@ -7,7 +7,7 @@ BACKUP_DIR=./backups
 # BASIC COMMANDS
 
 test-make:
-	echo "Project name: $(PROJECT_NAME)"
+	echo "Project: $(PROJECT_NAME) - ✅ Deploy completed!"
 up:
 	$(DOCKER_COMPOSE) up -d --build
 

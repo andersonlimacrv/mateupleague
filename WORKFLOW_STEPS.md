@@ -1,199 +1,257 @@
 # 📋 Guia Completo: Configuração de Deploy Automatizado com GitHub Actions
 
 ## 🎯 Objetivo
-Configurar um usuário dedicado na VPS para deploy automatizado via GitHub Actions, usando chaves SSH específicas e seguras.
+Configurar deploy automatizado seguro usando GitHub Actions para fazer deploy em VPS, com usuário dedicado e chaves SSH separadas para maior segurança.
 
 ---
 
-## 🔐 PASSO 1: Criar Chave SSH no VPS para GitHub
+## 👤 PASSO 1: Criar Usuário Deploy na VPS
 
-**Execute no servidor como root:**
+**Execute como root no servidor:**
 
 ```bash
-# Conectar como root primeiro
-ssh -i sua_chave_root root@seu_server
+# Conectar como root
+ssh root@XXX.XX.XX.XX
 
-# Criar chave SSH específica para deploy no GitHub
-sudo -u deploy ssh-keygen -t ed25519 -f /home/deploy/.ssh/github_actions_deploy -N ""
+# Criar usuário deploy sem senha (apenas SSH)
+adduser --disabled-password --gecos "" USER
 
-# Verificar a chave pública gerada
-cat /home/deploy/.ssh/github_actions_deploy.pub
+# Adicionar ao grupo docker (se usar containers)
+usermod -aG docker USER
 
-# Configurar permissões de segurança
-chown -R deploy:deploy /home/deploy/.ssh
-chmod 700 /home/deploy/.ssh
-chmod 600 /home/deploy/.ssh/github_actions_deploy
-chmod 644 /home/deploy/.ssh/github_actions_deploy.pub
-chmod 644 /home/deploy/.ssh/known_hosts 2>/dev/null || true
+# Criar diretório .ssh com permissões seguras
+mkdir -p /home/USER/.ssh
+chmod 700 /home/USER/.ssh
+chown -R USER:USER /home/USER/.ssh
 ```
-
-**📝 Notas:**
-- `-t ed25519`: Algoritmo mais moderno e seguro
-- `-f /home/deploy/.ssh/github_actions_deploy`: Nome descritivo da chave
-- `-N ""`: Senha vazia (para automação)
-- Permissões corretas são **CRUCIAIS** para funcionamento do SSH
 
 ---
 
-## 🔗 PASSO 2: Configurar Deploy Key no GitHub
+## 🔐 PASSO 2: Gerar e Configurar Chaves SSH
 
-1. **Acesse seu repositório no GitHub**
-2. **Vá em:** Settings → Deploy Keys
-3. **Clique em:** "Add deploy key"
-4. **Configure:**
+### **Opção A: Usar Mesma Chave (Mais Simples)**
+```bash
+# Gerar uma única chave para tudo
+sudo -u USER ssh-keygen -t ed25519 -f /home/USER/.ssh/name_of_file_SSH_PRIVATE_KEY -N ""
+
+# Configurar authorized_keys com a chave pública
+cat /home/USER/.ssh/name_of_file_SSH_PRIVATE_KEY.pub > /home/USER/.ssh/authorized_keys
+chmod 600 /home/USER/.ssh/authorized_keys
+chown USER:USER /home/USER/.ssh/authorized_keys
+```
+
+### **Opção B: Chaves Separadas (Mais Seguro)**
+```bash
+# Chave para acesso SSH à VPS
+sudo -u USER ssh-keygen -t ed25519 -f /home/USER/.ssh/vps_access_key -N ""
+
+# Chave para git pull no GitHub  
+sudo -u USER ssh-keygen -t ed25519 -f /home/USER/.ssh/github_deploy_key -N ""
+
+# Configurar authorized_keys apenas com a chave de acesso
+cat /home/USER/.ssh/vps_access_key.pub > /home/USER/.ssh/authorized_keys
+chmod 600 /home/USER/.ssh/authorized_keys
+chown USER:USER /home/USER/.ssh/authorized_keys
+```
+
+**📝 Notas de Segurança:**
+- `-t ed25519`: Algoritmo moderno e seguro
+- `-N ""`: Sem senha para automação
+- Permissões: `.ssh` (700), chaves privadas (600), authorized_keys (600)
+
+---
+
+## 🔗 PASSO 3: Configurar Deploy Key no GitHub
+
+1. **Acesse seu repositório** → **Settings** → **Deploy Keys**
+2. **Clique em:** "Add deploy key"
+3. **Configure:**
    - **Title:** `vps-deploy-key`
-   - **Key:** Cole o conteúdo de `/home/deploy/.ssh/github_actions_deploy.pub`
+   - **Key:** Cole o conteúdo da chave pública:
+     ```bash
+     # Para chave única:
+     cat /home/USER/.ssh/name_of_file_SSH_PRIVATE_KEY.pub
+     
+     # Para chaves separadas:
+     cat /home/USER/.ssh/github_deploy_key.pub
+     ```
    - **✓ Allow write access:** MARQUE esta opção
 
 ---
 
-## ⚙️ PASSO 3: Configurar Secrets no GitHub
+## ⚙️ PASSO 4: Configurar GitHub Secrets
 
-No seu repositório GitHub → **Settings** → **Secrets and variables** → **Actions**
+No repositório GitHub → **Settings** → **Secrets and variables** → **Actions**
 
-### **Adicione estas Secrets:**
+### **Para Chave Única:**
+| Secret | Valor | Como obter |
+|--------|-------|------------|
+| `SSH_PRIVATE_KEY` | Conteúdo da chave privada | `cat /home/USER/.ssh/name_of_file_SSH_PRIVATE_KEY` |
+| `SSH_PRIVATE_KEY_NAME` | `name_of_file_SSH_PRIVATE_KEY` | Nome do arquivo |
+| `PUB_GITHUB_KEY_NAME` | `name_of_file_SSH_PRIVATE_KEY` | Mesmo nome |
+| `VPS_HOST` | `XXX.XX.XX.XX` | IP da VPS |
+| `VPS_USER` | `USER` | Usuário deploy |
+| `REPO_VPS` | `/destination/to/your/project` | Caminho do projeto |
 
-| Nome da Secret | Valor | Descrição |
-|----------------|-------|-----------|
-| `SSH_PRIVATE_KEY` | Conteúdo da chave **privada** de acesso à VPS | ` cat /home/deploy/.ssh/github_actions_deploy` |
-| `SSH_PRIVATE_KEY_NAME` | `github_actions_deploy` | Nome do arquivo da chave |
-| `VPS_HOST` | `XXX.XX.XX.XX` | IP/domínio da sua VPS |
-| `VPS_USER` | `deploy` | Usuário de deploy na VPS |
-| `REPO_VPS` | `/caminho/para/seu/projeto` | Caminho absoluto do projeto na VPS |
-| `PUB_GITHUB_KEY` | Conteúdo de `github_actions_deploy` (privada) | Chave para git pull no VPS |
+### **Para Chaves Separadas:**
+| Secret | Valor | Como obter |
+|--------|-------|------------|
+| `SSH_PRIVATE_KEY` | Conteúdo de `vps_access_key` | `cat /home/USER/.ssh/vps_access_key` |
+| `SSH_PRIVATE_KEY_NAME` | `vps_access_key` | Nome da chave de acesso |
+| `PUB_GITHUB_KEY_NAME` | `github_deploy_key` | Nome da chave GitHub |
+| `VPS_HOST` | `XXX.XX.XX.XX` | IP da VPS |
+| `VPS_USER` | `USER` | Usuário deploy |
+| `REPO_VPS` | `/destination/to/your/project` | Caminho do projeto |
 
 ---
 
-## 🔄 PASSO 4: Arquivo GitHub Actions
+## 🔄 PASSO 5: Workflow GitHub Actions
 
-Crie o arquivo `.github/workflows/deploy.yml`:
-
+### **Workflow para Chave Única:**
 ```yaml
 name: 🚀 Deploy to VPS
 
 on:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
-      - 'README.md'
+    branches: [main]
 
 jobs:
   deploy:
-    name: 🎯 Deploy Application
+    name: Deploy Application
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔑 Setup SSH for VPS connection
+      - name: 🔑 Setup SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
           chmod 600 ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: 🔧 Setup GitHub Deploy Key on VPS
+      - name: 🚀 Execute Deploy
         run: |
           ssh -i ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            set -e  # Exit on error
-            mkdir -p ~/.ssh
-            echo "${{ secrets.GITHUB_DEPLOY_KEY }}" > ~/.ssh/github_actions_deploy
-            chmod 600 ~/.ssh/github_actions_deploy
+            set -e
+            cd ${{ secrets.REPO_VPS }}
+
+            # Configurar git safe directory
+            git config --global --add safe.directory $PWD
+
+            export DOCKER_BUILDKIT=1
+            export COMPOSE_DOCKER_CLI_BUILD=1
             
-            # Adicionar GitHub aos known_hosts
-            ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null
+            # Usa mesma chave para git pull
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }} -o StrictHostKeyChecking=no" \
+            git pull origin main
             
-            echo "✅ GitHub deploy key configured successfully"
+            make test-make
           EOF
+```
+
+### **Workflow para Chaves Separadas:**
+```yaml
+# ... (mesmos steps iniciais)
 
       - name: 🚀 Execute Deploy
         run: |
           ssh -i ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            set -e  # Exit on any error
-            
-            echo "📁 Navigating to project directory..."
+            set -e
             cd ${{ secrets.REPO_VPS }}
+
+            git config --global --add safe.directory $PWD
+
+            export DOCKER_BUILDKIT=1
+            export COMPOSE_DOCKER_CLI_BUILD=1
             
-            echo "🔧 Configuring Git SSH..."
-            export GIT_SSH_COMMAND="ssh -i ~/.ssh/github_actions_deploy -o StrictHostKeyChecking=no"
+            # Usa chave específica para GitHub
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/${{ secrets.PUB_GITHUB_KEY_NAME }} -o StrictHostKeyChecking=no" \
+            git pull origin main
             
-            echo "📥 Pulling latest changes..."
-            git fetch origin
-            git reset --hard origin/main
-            
-            echo "🐳 Deploying with Docker..."
-            make down || echo "⚠️ Make down failed, continuing..."
-            make up
-            make deploy
-            
-            echo "🧹 Cleaning up..."
-            unset GIT_SSH_COMMAND
-            
-            echo "✅ Deploy completed successfully!"
+            make test-make
           EOF
-
-      - name: ✅ Deployment Success
-        run: echo "🎉 Deployment completed successfully!"
 ```
 
 ---
 
-## 🛡️ PASSO 5: Configurações de Segurança (Opcional)
+## 🧪 PASSO 6: Testar a Configuração
 
-**Para maior segurança no VPS:**
-
+### **Teste Manual na VPS:**
 ```bash
-# Restringir usuário deploy (opcional)
-sudo usermod -s /bin/rbash deploy
+# Testar autenticação GitHub
+sudo -u USER ssh -i /home/USER/.ssh/name_of_file_SSH_PRIVATE_KEY -T git@github.com
+# Saída esperada: Hi username/repo! You've successfully authenticated...
 
-# Criar diretório binário restrito
-sudo mkdir /home/deploy/bin
-sudo ln -s /usr/bin/git /home/deploy/bin/git
-sudo ln -s /usr/bin/make /home/deploy/bin/make
-sudo ln -s /usr/bin/docker /home/deploy/bin/docker
-sudo ln -s /usr/bin/docker-compose /home/deploy/bin/docker-compose
+# Testar git pull
+sudo -u USER bash -c '
+  cd /destination/to/your/project
+  GIT_SSH_COMMAND="ssh -i ~/.ssh/name_of_file_SSH_PRIVATE_KEY -o StrictHostKeyChecking=no" git pull origin main
+'
+```
 
-# Configurar PATH restrito
-echo 'PATH=/home/deploy/bin' >> /home/deploy/.bashrc
+### **Teste Local no PowerShell:**
+```powershell
+# Testar conexão SSH
+ssh -i ~/.ssh/name_of_file_SSH_PRIVATE_KEY USER@XXX.XX.XX.XX "echo '✅ SSH conectado' && whoami"
+
+# Testar diretório do projeto
+ssh -i ~/.ssh/name_of_file_SSH_PRIVATE_KEY USER@XXX.XX.XX.XX "cd /destination/to/your/project && pwd && ls -la"
 ```
 
 ---
 
-## 🧪 PASSO 6: Teste a Configuração
+## 🔍 Troubleshooting Detalhado
 
-**Teste manualmente no VPS:**
+### ❌ "Permission denied (publickey)"
 ```bash
-sudo -u deploy ssh -i /home/deploy/.ssh/github_actions_deploy -T git@github.com
-```
-**Saída esperada:** `Hi username/repo! You've successfully authenticated...`
+# Verificar authorized_keys
+ls -la /home/USER/.ssh/
+cat /home/USER/.ssh/authorized_keys
 
-**Teste o deploy manualmente:**
+# Corrigir permissões
+chmod 700 /home/USER/.ssh
+chmod 600 /home/USER/.ssh/*
+chown -R USER:USER /home/USER/.ssh
+```
+
+### ❌ "fatal: detected dubious ownership"
 ```bash
-sudo -u deploy bash
-cd $REPO_VPS
-GIT_SSH_COMMAND="ssh -i ~/.ssh/github_actions_deploy" git pull origin main
+# No VPS, executar:
+git config --global --add safe.directory /destination/to/your/project
+```
+
+### ❌ "make: *** No rule to make target"
+```bash
+# Verificar se Makefile existe e tem os targets
+ls -la Makefile
+make --help
+```
+
+### ❌ "Repository not found" ou acesso negado
+- Verificar se a **chave pública** está nas **Deploy Keys** do GitHub
+- Confirmar que **"Allow write access"** está marcado
+- Verificar se o repositório é privado e a chave tem acesso
+
+### ❌ "Host key verification failed"
+```bash
+# No VPS, executar:
+ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 ```
 
 ---
 
-## 🔍 Troubleshooting Comum
+## ✅ Checklist de Validação
 
-### ❌ Erro: "Permission denied (publickey)"
-- Verifique permissões do diretório `.ssh` (deve ser 700)
-- Verifique permissões da chave privada (deve ser 600)
-- Confirme se a chave pública está na Deploy Keys do GitHub
-
-### ❌ Erro: "Host key verification failed"
-- Execute manualmente no VPS: `ssh-keyscan -H github.com >> ~/.ssh/known_hosts`
-
-### ❌ Erro: "Could not resolve hostname"
-- Verifique se `VPS_HOST` está correto nas GitHub Secrets
+- [ ] Usuário deploy criado sem senha
+- [ ] Diretório .ssh com permissões corretas (700)
+- [ ] Chaves SSH geradas (pública e privada)
+- [ ] authorized_keys configurado com chave pública
+- [ ] Deploy Key adicionada no GitHub
+- [ ] Todas as Secrets configuradas no GitHub
+- [ ] Git safe.directory configurado
+- [ ] Teste manual de conexão SSH bem-sucedido
+- [ ] Teste manual de git pull funcionando
 
 ---
-
-
-
