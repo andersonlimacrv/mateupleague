@@ -1,7 +1,7 @@
 services:
-  backend:
+  matebackend:
     build: ./backend
-    container_name: backend
+    container_name: mateupleague_backend
     env_file: .env
     environment:
       - DATABASE_URL=${DATABASE_URL}
@@ -24,10 +24,8 @@ services:
         VITE_FRONTEND_PORT: ${VITE_FRONTEND_PORT}
         VITE_BACKEND_PORT: ${VITE_BACKEND_PORT}
         VITE_DEPLOY_API: ${VITE_DEPLOY_API}
-        VITE_BROKER_API_URL: ${VITE_BROKER_API_URL}
-        VITE_BROKER_API_K: ${VITE_BROKER_API_K}
 
-    container_name: frontend
+    container_name: mateupleague_frontend
     depends_on:
       - backend
     env_file: .env
@@ -35,8 +33,7 @@ services:
       - VITE_FRONTEND_PORT=${VITE_FRONTEND_PORT}
       - VITE_BACKEND_PORT=${VITE_BACKEND_PORT}
       - VITE_DEPLOY_API=${VITE_DEPLOY_API}
-      - VITE_BROKER_API_URL=${VITE_BROKER_API_URL}
-      - VITE_BROKER_API_K=${VITE_BROKER_API_K}
+      
     networks:
       - app-network
     ports:
@@ -48,7 +45,7 @@ services:
 
   db:
     image: postgres:17
-    container_name: postgres_db
+    container_name: mateupleague_postgres
     env_file: .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
