@@ -17,16 +17,14 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/github_actions_deploy
-          chmod 600 ~/.ssh/github_actions_deploy
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
+          chmod 600 ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/${{ secrets.KNOW_HOSTS_PATH }}
 
       - name: Deploy via SSH
         run: |
-          ssh -i ~/.ssh/github_actions_deploy ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+          ssh -i ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
             cd ${{ secrets.REPO_VPS }}
-
-            ls -la
 
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
