@@ -27,8 +27,6 @@ jobs:
             set -e
             cd ${{ secrets.REPO_VPS }}
 
-            git config --global --add safe.directory $PWD
-
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
             

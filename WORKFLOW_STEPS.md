@@ -1,11 +1,6 @@
-# 📋 Guia Completo: Configuração de Deploy Automatizado com GitHub Actions
+# 📋 Configuração de Deploy Automatizado com GitHub Actions
 
-## 🎯 Objetivo
-Configurar deploy automatizado seguro usando GitHub Actions para fazer deploy em VPS, com usuário dedicado e chaves SSH separadas para maior segurança.
-
----
-
-## 👤 PASSO 1: Criar Usuário Deploy na VPS
+## 👤 STEP 1: Criar Usuário Deploy na VPS
 
 **Execute como root no servidor:**
 
@@ -27,7 +22,7 @@ chown -R USER:USER /home/USER/.ssh
 
 ---
 
-## 🔐 PASSO 2: Gerar e Configurar Chaves SSH
+## 🔐 STEP 2: Gerar e Configurar Chaves SSH
 
 ### **Opção A: Usar Mesma Chave (Mais Simples)**
 ```bash
@@ -61,7 +56,44 @@ chown USER:USER /home/USER/.ssh/authorized_keys
 
 ---
 
-## 🔗 PASSO 3: Configurar Deploy Key no GitHub
+## 🛠️ STEP 2.1: Configurar Permissões do Repositório Git
+
+**⚠️ CRÍTICO: Se o repositório foi clonado como root, execute:**
+
+```bash
+# Dar permissão ao usuário deploy para acessar o repositório
+chown -R USER:USER /home/USER/apps/your_project/.git
+```
+
+**Por que isso é necessário:**
+- Evita erro: `error: cannot open '.git/FETCH_HEAD': Permission denied`
+- Garante que o usuário deploy possa executar comandos git
+
+---
+
+## 🛠️ STEP 2.2: Configurar Permissões de Escrita do Projeto
+
+**⚠️ CRÍTICO: Dar permissão completa ao usuário deploy no projeto**
+
+```bash
+# Dar ownership COMPLETO do projeto ao usuário deploy
+chown -R USER:USER /home/USER/apps/your_project
+
+# Garantir permissões de escrita em diretórios e arquivos
+find /home/USER/apps/your_project -type d -exec chmod 755 {} \;
+find /home/USER/apps/your_project -type f -exec chmod 644 {} \;
+```
+
+**🎯 POR QUE ESTE PASSO É ESSENCIAL:**
+- Permite ao usuário deploy **criar/atualizar** arquivos durante o git pull
+- Evita erros como:
+  - `error: unable to create file .env.example: Permission denied`
+  - `fatal: cannot create directory at '.github': Permission denied`
+- Garante que o workflow consiga **escrever** no sistema de arquivos
+
+---
+
+## 🔗 STEP 3: Configurar Deploy Key no GitHub
 
 1. **Acesse seu repositório** → **Settings** → **Deploy Keys**
 2. **Clique em:** "Add deploy key"
@@ -79,7 +111,7 @@ chown USER:USER /home/USER/.ssh/authorized_keys
 
 ---
 
-## ⚙️ PASSO 4: Configurar GitHub Secrets
+## ⚙️ STEP 4: Configurar GitHub Secrets
 
 No repositório GitHub → **Settings** → **Secrets and variables** → **Actions**
 
@@ -105,7 +137,7 @@ No repositório GitHub → **Settings** → **Secrets and variables** → **Acti
 
 ---
 
-## 🔄 PASSO 5: Workflow GitHub Actions
+## 🔄 STEP 5: Workflow GitHub Actions
 
 ### **Workflow para Chave Única:**
 ```yaml
@@ -113,7 +145,8 @@ name: 🚀 Deploy to VPS
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   deploy:
@@ -124,28 +157,24 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔑 Setup SSH
+      - name: 🔑 Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
           chmod 600 ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: 🚀 Execute Deploy
+      - name: 🚀Execute Deploy - via SSH
         run: |
           ssh -i ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
             set -e
             cd ${{ secrets.REPO_VPS }}
 
-            # Configurar git safe directory
-            git config --global --add safe.directory $PWD
-
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
             
             # Usa mesma chave para git pull
-            GIT_SSH_COMMAND="ssh -i ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }} -o StrictHostKeyChecking=no" \
-            git pull origin main
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }} -o StrictHostKeyChecking=no" git pull origin main
             
             make test-make
           EOF
@@ -153,22 +182,40 @@ jobs:
 
 ### **Workflow para Chaves Separadas:**
 ```yaml
-# ... (mesmos steps iniciais)
+name: 🚀 Deploy to VPS
 
-      - name: 🚀 Execute Deploy
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔑 Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
+          chmod 600 ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }}
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 🚀 Execute Deploy - via SSH
         run: |
           ssh -i ~/.ssh/${{ secrets.SSH_PRIVATE_KEY_NAME }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
             set -e
             cd ${{ secrets.REPO_VPS }}
 
-            git config --global --add safe.directory $PWD
-
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
             
             # Usa chave específica para GitHub
-            GIT_SSH_COMMAND="ssh -i ~/.ssh/${{ secrets.PUB_GITHUB_KEY_NAME }} -o StrictHostKeyChecking=no" \
-            git pull origin main
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/${{ secrets.PUB_GITHUB_KEY_NAME }} -o StrictHostKeyChecking=no" git pull origin main
             
             make test-make
           EOF
@@ -176,13 +223,16 @@ jobs:
 
 ---
 
-## 🧪 PASSO 6: Testar a Configuração
+## 🧪 STEP 6: Testar a Configuração
 
 ### **Teste Manual na VPS:**
 ```bash
 # Testar autenticação GitHub
 sudo -u USER ssh -i /home/USER/.ssh/name_of_file_SSH_PRIVATE_KEY -T git@github.com
 # Saída esperada: Hi username/repo! You've successfully authenticated...
+
+# Configurar safe directory
+sudo -u USER git config --global --add safe.directory /destination/to/your/project
 
 # Testar git pull
 sudo -u USER bash -c '
@@ -216,9 +266,30 @@ chmod 600 /home/USER/.ssh/*
 chown -R USER:USER /home/USER/.ssh
 ```
 
+### ❌ "error: cannot open '.git/FETCH_HEAD': Permission denied"
+```bash
+# Corrigir permissões do .git
+chown -R USER:USER /home/USER/apps/your_project/.git
+```
+
+### ❌ "error: unable to create file .env.example: Permission denied"
+```bash
+# Corrigir permissões do projeto completo
+chown -R USER:USER /home/USER/apps/your_project
+find /home/USER/apps/your_project -type d -exec chmod 755 {} \;
+find /home/USER/apps/your_project -type f -exec chmod 644 {} \;
+```
+
+### ❌ "fatal: cannot create directory at '.github': Permission denied"
+```bash
+# Corrigir permissões do projeto completo
+chown -R USER:USER /home/USER/apps/your_project
+find /home/USER/apps/your_project -type d -exec chmod 755 {} \;
+```
+
 ### ❌ "fatal: detected dubious ownership"
 ```bash
-# No VPS, executar:
+# Configurar safe directory
 git config --global --add safe.directory /destination/to/your/project
 ```
 
@@ -248,6 +319,8 @@ ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 - [ ] Diretório .ssh com permissões corretas (700)
 - [ ] Chaves SSH geradas (pública e privada)
 - [ ] authorized_keys configurado com chave pública
+- [ ] **Permissões do .git configuradas para o usuário deploy**
+- [ ] **Permissões de escrita do projeto configuradas para o usuário deploy**
 - [ ] Deploy Key adicionada no GitHub
 - [ ] Todas as Secrets configuradas no GitHub
 - [ ] Git safe.directory configurado
