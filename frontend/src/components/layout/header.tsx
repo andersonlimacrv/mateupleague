@@ -1,43 +1,40 @@
-'use client';
+
 import React from 'react';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { createPortal } from "react-dom";
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MenuToggleIcon } from '@/components/ui/menu-toggle-icon';
-import { useScroll } from '@/hooks/use-scroll';
+import { useScroll } from '@/hooks/useScroll';
+import type { LinkItem } from "@/types/components/link-item-navbar-header";
+import { MateUpLogo } from "@/components/common/mateup-logo";
+import {
+  productLinks,
+  companyLinks,
+  companyLinks2,
+} from "@/lib/constants/navbar-header";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
 
 export function Header() {
 	const [open, setOpen] = React.useState(false);
 	const scrolled = useScroll(10);
 
-	const links = [
-		{
-			label: 'Features',
-			href: '#',
-		},
-		{
-			label: 'Pricing',
-			href: '#',
-		},
-		{
-			label: 'About',
-			href: '#',
-		},
-	];
-
 	React.useEffect(() => {
-		if (open) {
-			// Disable scroll
-			document.body.style.overflow = 'hidden';
-		} else {
-			// Re-enable scroll
-			document.body.style.overflow = '';
-		}
-
-		// Cleanup when component unmounts (important for Next.js)
-		return () => {
-			document.body.style.overflow = '';
-		};
-	}, [open]);
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
 	return (
     <header
@@ -62,16 +59,72 @@ export function Header() {
           <MateUpLogo className="h-8" />
           <p className="-rotate-45">🚀</p>
         </div>
+        <NavigationMenu className="hidden md:flex">
+          <NavigationMenuList>
+            <NavigationMenuItem>
+              <NavigationMenuTrigger className="bg-transparent">
+                Product
+              </NavigationMenuTrigger>
+              <NavigationMenuContent className="bg-background p-1 pr-1.5">
+                <ul className="bg-popover grid w-lg grid-cols-2 gap-2 rounded-md border p-2 shadow">
+                  {productLinks.map((item, i) => (
+                    <li key={i}>
+                      <ListItem {...item} />
+                    </li>
+                  ))}
+                </ul>
+                <div className="p-2">
+                  <p className="text-muted-foreground text-sm">
+                    Interested?{" "}
+                    <a
+                      href="#"
+                      className="text-foreground font-medium hover:underline"
+                    >
+                      Schedule a demo
+                    </a>
+                  </p>
+                </div>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <NavigationMenuTrigger className="bg-transparent">
+                Company
+              </NavigationMenuTrigger>
+              <NavigationMenuContent className="bg-background p-1 pr-1.5 pb-1.5">
+                <div className="grid w-lg grid-cols-2 gap-2">
+                  <ul className="bg-popover space-y-2 rounded-md border p-2 shadow">
+                    {companyLinks.map((item, i) => (
+                      <li key={i}>
+                        <ListItem {...item} />
+                      </li>
+                    ))}
+                  </ul>
+                  <ul className="space-y-2 p-3">
+                    {companyLinks2.map((item, i) => (
+                      <li key={i}>
+                        <NavigationMenuLink
+                          href={item.href}
+                          className="flex p-2 hover:bg-accent flex-row rounded-md items-center gap-x-2"
+                        >
+                          <item.icon className="text-foreground size-4 drop-shadow-black/80 drop-shadow" />
+                          <span className="font-medium drop-shadow-black/80 drop-shadow">
+                            {item.title}
+                          </span>
+                        </NavigationMenuLink>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
+            <NavigationMenuLink className="px-4" asChild>
+              <a href="#" className="hover:bg-accent rounded-md py-1.5">
+                <p className="drop-shadow-black/80 drop-shadow">Pricing</p>
+              </a>
+            </NavigationMenuLink>
+          </NavigationMenuList>
+        </NavigationMenu>
         <div className="hidden items-center gap-2 md:flex">
-          {links.map((link, i) => (
-            <a
-              key={i}
-              className={buttonVariants({ variant: "ghost" })}
-              href={link.href}
-            >
-              {link.label}
-            </a>
-          ))}
           <Button variant="outline">Sign In</Button>
           <Button>Get Started</Button>
         </div>
@@ -80,100 +133,101 @@ export function Header() {
           variant="outline"
           onClick={() => setOpen(!open)}
           className="md:hidden"
+          aria-expanded={open}
+          aria-controls="mobile-menu"
+          aria-label="Toggle menu"
         >
           <MenuToggleIcon open={open} className="size-5" duration={300} />
         </Button>
       </nav>
 
-      <div
-        className={cn(
-          "bg-background/90 fixed top-14 right-0 bottom-0 left-0 z-50 flex flex-col overflow-hidden border-y md:hidden",
-          open ? "block" : "hidden"
-        )}
+      <MobileMenu
+        open={open}
+        className="flex flex-col justify-between gap-2 overflow-y-auto"
       >
-        <div
-          data-slot={open ? "open" : "closed"}
-          className={cn(
-            "data-[slot=open]:animate-in data-[slot=open]:zoom-in-95 data-[slot=closed]:animate-out data-[slot=closed]:zoom-out-95 ease-out",
-            "flex h-full w-full flex-col justify-between gap-y-2 p-4"
-          )}
-        >
-          <div className="grid gap-y-2">
-            {links.map((link) => (
-              <a
-                key={link.label}
-                className={buttonVariants({
-                  variant: "ghost",
-                  className: "justify-start",
-                })}
-                href={link.href}
-              >
-                {link.label}
-              </a>
+        <NavigationMenu className="max-w-full">
+          <div className="flex w-full flex-col gap-y-2">
+            <span className="text-sm">Product</span>
+            {productLinks.map((link) => (
+              <ListItem key={link.title} {...link} />
+            ))}
+            <span className="text-sm">Company</span>
+            {companyLinks.map((link) => (
+              <ListItem key={link.title} {...link} />
+            ))}
+            {companyLinks2.map((link) => (
+              <ListItem key={link.title} {...link} />
             ))}
           </div>
-          <div className="flex flex-col gap-2">
-            <Button variant="outline" className="w-full">
-              Sign In
-            </Button>
-            <Button className="w-full">Get Started</Button>
-          </div>
+        </NavigationMenu>
+        <div className="flex flex-col gap-2">
+          <Button variant="outline" className="w-full bg-transparent">
+            Sign In
+          </Button>
+          <Button className="w-full">Get Started</Button>
         </div>
-      </div>
+      </MobileMenu>
     </header>
   );
 }
 
-export const MateUpLogo = (props: React.ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 420 160"
-    fill="currentColor"
-    xmlns="http://www.w3.org/2000/svg"
-    {...props}
-  >
-    <g
-      textAnchor="middle"
-      fontFamily="Inter, sans-serif"
-      dominantBaseline="middle"
-    >
-      {/* MATE */}
-      <text
-        x="30%"
-        y="45%"
-        fontWeight="900"
-        fontSize="72"
-        opacity="0.8"
-        letterSpacing="6px"
-      >
-        mate
-      </text>
+type MobileMenuProps = React.ComponentProps<'div'> & {
+  open: boolean;
+};
 
-      {/* UP */}
-      <text
-        x="75%"
-        y="45%"
-        className="text-[#0ACACA] animate-pulse duration-1000 ease-in-out"
-        fontWeight="900"
-        fontSize="100"
-        letterSpacing="6px"
-      >
-        Up
-      </text>
-    </g>
-    {/* LEAGUE */}{" "}
-    <text
-      x="60%"
-      y="90%"
-      textAnchor="middle"
-      fontFamily="Inter, sans-serif"
-      fontWeight="800"
-      fontSize="50"
-      opacity="0.8"
-      letterSpacing="8px"
-      dominantBaseline="middle"
-      fill="#ae0538"
+function MobileMenu({ open, children, className, ...props }: MobileMenuProps) {
+  if (!open || typeof window === 'undefined') return null;
+
+  return createPortal(
+    <div
+      id="mobile-menu"
+      className={cn(
+        "bg-background/90 supports-backdrop-filter:bg-background/50 backdrop-blur-md",
+        "fixed top-14 right-0 bottom-0 left-0 z-40 flex flex-col overflow-hidden border-y md:hidden"
+      )}
     >
-      LEAGUE
-    </text>
-  </svg>
-);
+      <div
+        data-slot={open ? "open" : "closed"}
+        className={cn(
+          "data-[slot=open]:animate-in data-[slot=open]:zoom-in-97 ease-out",
+          "size-full p-4",
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function ListItem({
+  title,
+  description,
+  icon: Icon,
+  className,
+  href,
+  ...props
+}: React.ComponentProps<typeof NavigationMenuLink> & LinkItem) {
+  return (
+    <NavigationMenuLink
+      className={cn(
+        "w-full flex flex-row gap-x-2 data-[active=true]:focus:bg-accent data-[active=true]:hover:bg-accent data-[active=true]:bg-accent/50 data-[active=true]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground rounded-sm p-2",
+        className
+      )}
+      {...props}
+      asChild
+    >
+      <a href={href} className="group">
+        <div className="bg-background/40 flex aspect-square size-12 items-center justify-center rounded-md border shadow-sm">
+          <Icon className="text-foreground size-5" />
+        </div>
+        <div className="flex flex-col items-start justify-center">
+          <span className="font-medium">{title}</span>
+          <span className="text-foreground text-sm drop-shadow-black/90 drop-shadow">{description}</span>
+        </div>
+      </a>
+    </NavigationMenuLink>
+  );
+}
