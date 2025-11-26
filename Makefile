@@ -1,4 +1,4 @@
-PROJECT_NAME=bootloader-manager-app
+PROJECT_NAME=mateup-league-app
 DOCKER_COMPOSE=docker-compose
 FRONTEND_BUILD_DIR=frontend-output
 NGINX_HTML_DIR=/var/www/$(PROJECT_NAME)/html

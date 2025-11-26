@@ -1,5 +1,5 @@
 services:
-  matebackend:
+  backend:
     build: ./backend
     container_name: mateupleague_backend
     env_file: .env
@@ -57,7 +57,7 @@ services:
     networks:
       - app-network
     ports:
-      - "${DB_PORT}:${DB_PORT}"
+      - "${DB_PORT}:5432"
     restart: unless-stopped
 
 volumes:
