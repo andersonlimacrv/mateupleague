@@ -51,7 +51,7 @@ export function Header() {
         className={cn(
           "flex h-14 w-full items-center justify-between px-4 md:h-12 md:transition-all md:ease-out",
           {
-            "md:px-2": scrolled,
+            "md:px-2 py-7": scrolled,
           }
         )}
       >

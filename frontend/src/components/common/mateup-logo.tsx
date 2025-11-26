@@ -26,7 +26,7 @@ export const MateUpLogo = (props: React.ComponentProps<"svg">) => (
       <text
         x="75%"
         y="45%"
-        className="text-[#0ACACA] animate-pulse duration-1000 ease-in-out"
+        className="text-accent animate-pulse duration-1000 ease-in-out"
         fontWeight="900"
         fontSize="100"
         letterSpacing="6px"
@@ -45,7 +45,7 @@ export const MateUpLogo = (props: React.ComponentProps<"svg">) => (
       opacity="0.8"
       letterSpacing="8px"
       dominantBaseline="middle"
-      fill="#ae0538"
+      className="text-primary"
     >
       LEAGUE
     </text>
