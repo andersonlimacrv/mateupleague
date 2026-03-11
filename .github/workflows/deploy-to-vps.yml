@@ -29,6 +29,8 @@ jobs:
 
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
+
+            git config --global --add safe.directory ${{ secrets.REPO_VPS }}
             
             GIT_SSH_COMMAND="ssh -i ~/.ssh/${{ secrets.PUB_GITHUB_KEY_NAME }} -o StrictHostKeyChecking=no" git pull origin main
             make test-make
